@@ -1,63 +1,67 @@
-use std::fs::File;
-use std::io::{self, BufRead};
-use std::path::Path;
+use std::fs;
+use std::io::Write;
+use std::time;
 
-fn part1() {
-    println!("**** Part 1 ****");
-    if let Ok(lines) = read_lines("input.txt") {
-        let mut last_val = -1;
-        let mut num_increases = 0;
-        for line in lines {
-            if let Ok(line) = line {
-                let val = line.parse::<i32>().unwrap();
-                if last_val != -1 && last_val < val {
-                    num_increases += 1;
-                }
-                last_val = val;
-            }
+fn part1(values: &[usize]) -> usize {
+    let mut num_increases = 0;
+    for i in 1..values.len() {
+        if values[i] > values[i - 1] {
+            num_increases += 1;
         }
-        println!("Number of increases: {}", num_increases);
     }
+    num_increases
 }
 
-fn part2() {
-    println!("**** Part 2 ****");
-    if let Ok(lines) = read_lines("input.txt") {
-        let mut window: [i32; 3] = [0, 0, 0];
-        let mut window_index = 0;
-        let mut last_window_sum = -1;
-        let mut num_window_increases = 0;
-        let mut num_lines_visited = 0;
-        for line in lines {
-            if let Ok(line) = line {
-                let val = line.parse::<i32>().unwrap();
-                window[window_index] = val;
-                window_index = (window_index + 1) % 3;
-                num_lines_visited += 1;
-                if num_lines_visited >= 3 {
-                    let window_sum = window[0] + window[1] + window[2];
-                    if last_window_sum != -1 && last_window_sum < window_sum {
-                        num_window_increases += 1;
-                    }
-                    last_window_sum = window_sum;
-                }
-            }
+// a0 + a1 + a2 < a1 + a2 + a3
+// a0 < a3
+fn part2(values: &[usize]) -> usize {
+    let mut num_increases = 0;
+    for i in 3..values.len() {
+        if values[i] > values[i - 3] {
+            num_increases += 1;
         }
-        println!("Number of window increases: {}", num_window_increases);
     }
+    num_increases
 }
 
 fn main() {
-    part1();
-    part2();
-}
+    let total_time_start = time::Instant::now();
+    let stdout = std::io::stdout();
+    let mut stdout_handle = stdout.lock();
+    writeln!(stdout_handle, "AoC 2021 Day 1").unwrap();
+    writeln!(stdout_handle, "----------------------------------\n").unwrap();
 
-// The output is wrapped in a Result to allow matching on errors
-// Returns an Iterator to the Reader of the lines of the file.
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
+    // Read all lines of input.txt
+    let read_time_start = time::Instant::now();
+    //let input = fs::read_to_string("example.txt").expect("Unable to read file");
+    let input = fs::read_to_string("input.txt").expect("Unable to read file");
+    let read_time = read_time_start.elapsed();
+    let convert_time_start = time::Instant::now();
+    let lines = input
+        .lines()
+        .map(|line| line.trim().parse::<usize>().unwrap())
+        .collect::<Vec<usize>>();
+    let convert_time = convert_time_start.elapsed();
+
+    let part1_time_start = time::Instant::now();
+    let part1_answer = part1(&lines);
+    let part1_time = part1_time_start.elapsed();
+    writeln!(stdout_handle, "Part 1 Answer: {}", part1_answer).unwrap();
+
+    writeln!(stdout_handle, "\n----------------------------------\n").unwrap();
+
+    let part2_time = time::Instant::now();
+    let part2_answer = part2(&lines);
+    let part2_time = part2_time.elapsed();
+    writeln!(stdout_handle, "Part 2 Answer: {}", part2_answer).unwrap();
+
+    writeln!(stdout_handle, "\n----------------------------------\n").unwrap();
+
+    writeln!(stdout_handle, "Read time: {:?}", read_time).unwrap();
+    writeln!(stdout_handle, "Convert time: {:?}", convert_time).unwrap();
+    writeln!(stdout_handle, "Part 1 time: {:?}", part1_time).unwrap();
+    writeln!(stdout_handle, "Part 2 time: {:?}", part2_time).unwrap();
+
+    let total_time = total_time_start.elapsed();
+    writeln!(stdout_handle, "Total time: {:?}", total_time).unwrap();
 }
