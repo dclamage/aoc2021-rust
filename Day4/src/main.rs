@@ -138,16 +138,14 @@ impl Board {
     }
 
     fn sum_unset(&self) -> u32 {
-        self.is_called
-            .iter()
-            .enumerate()
-            .fold(0, |acc, (i, is_called)| {
-                if !*is_called {
-                    acc + self.numbers[i]
-                } else {
-                    acc
-                }
-            })
+        let size = self.numbers.len();
+        let mut sum = 0;
+        for i in 0..size {
+            if !self.is_called[i] {
+                sum += self.numbers[i];
+            }
+        }
+        sum
     }
 }
 
