@@ -16,8 +16,8 @@ impl Line {
         if sections.len() != 2 {
             panic!("Invalid line: {}", line);
         }
-        let start = Point::from_sring(sections[0]);
-        let end = Point::from_sring(sections[1]);
+        let start = Point::from_string(sections[0]);
+        let end = Point::from_string(sections[1]);
         Line::new(start, end)
     }
 }

@@ -9,7 +9,7 @@ impl Point {
 		Point { x, y }
 	}
 
-	pub fn from_sring(section: &str) -> Point {
+	pub fn from_string(section: &str) -> Point {
 		let mut split = section.split(",");
 		let x = split.next().unwrap().trim().parse::<i32>().unwrap();
 		let y = split.next().unwrap().trim().parse::<i32>().unwrap();
