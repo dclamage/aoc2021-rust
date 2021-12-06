@@ -5,17 +5,7 @@ fn part1(initial_fish: &[i32]) -> u64 {
     let mut num_fish_per_day = init_fish_per_day(initial_fish);
 
     for _ in 0..80 {
-        let mut new_num_fish_per_day = vec![0; 9];
-        for day in 0..9 {
-            let cur_num_fish = num_fish_per_day[day];
-            if day == 0 {
-                new_num_fish_per_day[6] = cur_num_fish;
-                new_num_fish_per_day[8] = cur_num_fish;
-            } else {
-                new_num_fish_per_day[day - 1] += num_fish_per_day[day];
-            }
-        }
-        num_fish_per_day = new_num_fish_per_day;
+        num_fish_per_day = increment_day(&num_fish_per_day);
     }
 
     num_fish_per_day.iter().sum()
