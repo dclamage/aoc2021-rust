@@ -1,30 +1,22 @@
 use std::fs;
 use std::time;
 
+type EvalOp = fn(&[i32], i32) -> i32;
+
 fn part1(crab_loc: &[i32]) -> u64 {
-    let (min, max) = min_max_loc(&crab_loc);
-    let mut center_loc = min;
-    let mut best_cost = i32::max_value();
-    while center_loc != max {
-        let cost = eval_cost(crab_loc, center_loc);
-        if cost < best_cost {
-            best_cost = cost;
-        }
-        center_loc += 1;
-    }
-    best_cost as u64
+    find_best_cost(crab_loc, eval_cost)
 }
 
 fn part2(crab_loc: &[i32]) -> u64 {
+    find_best_cost(crab_loc, eval_cost_triangle)
+}
+
+fn find_best_cost(crab_loc: &[i32], eval_op : EvalOp) -> u64 {
     let (min, max) = min_max_loc(&crab_loc);
-    let mut center_loc = min;
     let mut best_cost = i32::max_value();
-    while center_loc != max {
-        let cost = eval_cost2(crab_loc, center_loc);
-        if cost < best_cost {
-            best_cost = cost;
-        }
-        center_loc += 1;
+    for center_loc in min..=max {
+        let cost = eval_op(crab_loc, center_loc);
+        best_cost = i32::min(best_cost, cost);
     }
     best_cost as u64
 }
@@ -32,13 +24,9 @@ fn part2(crab_loc: &[i32]) -> u64 {
 fn min_max_loc(crab_loc: &[i32]) -> (i32, i32) {
     let mut min = i32::max_value();
     let mut max = i32::min_value();
-    for loc in crab_loc {
-        if *loc < min {
-            min = *loc;
-        }
-        if *loc > max {
-            max = *loc;
-        }
+    for &loc in crab_loc {
+        min = i32::min(min, loc);
+        max = i32::max(max, loc);
     }
     (min, max)
 }
@@ -51,7 +39,7 @@ fn eval_cost(crab_loc: &[i32], center_loc: i32) -> i32 {
     cost
 }
 
-fn eval_cost2(crab_loc: &[i32], center_loc: i32) -> i32 {
+fn eval_cost_triangle(crab_loc: &[i32], center_loc: i32) -> i32 {
     let mut cost = 0;
     for loc in crab_loc {
         let dist = (*loc - center_loc).abs();
