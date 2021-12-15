@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, BinaryHeap};
+use std::cmp::Ordering;
 use std::fs;
 use std::time;
 
@@ -74,64 +75,78 @@ fn get_cost(costs: &CostMap, p: &(usize, usize)) -> usize {
     *costs.get(&p).unwrap_or(&0)
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Node {
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct NodeCost {
     x: usize,
     y: usize,
-    prev_x: usize,
-    prev_y: usize,
     cost: usize,
 }
 
-impl Node {
-    fn new(x: usize, y: usize) -> Node {
-        Node {
-            x,
-            y,
-            prev_x: usize::max_value(),
-            prev_y: usize::max_value(),
-            cost: usize::max_value(),
-        }
+impl Ord for NodeCost {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.cost.cmp(&self.cost)
+            .then_with(|| self.x.cmp(&other.x))
+            .then_with(|| self.y.cmp(&other.y))
     }
 }
 
-fn part1(costs: &CostMap) -> usize {
+impl PartialOrd for NodeCost {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn find_shortest_cost(costs: &CostMap) -> usize {
     let max_x = costs.iter().map(|(k, _)| k.0).max().unwrap();
     let max_y = costs.iter().map(|(k, _)| k.1).max().unwrap();
-    let mut nodes: HashMap<(usize, usize), Node> = HashMap::new();
-    for p in costs.keys() {
-        nodes.insert(*p, Node::new(p.0, p.1));
-    }
-    nodes.get_mut(&(0, 0)).unwrap().cost = 0;
-    
-    let mut unvisited_nodes: Vec<(usize, usize)> = nodes.keys().map(|k| *k).collect();
-    while !unvisited_nodes.is_empty() {
-        let (node_index, node_pos) = unvisited_nodes.iter().enumerate().min_by_key(|(_, p)| {
-            nodes.get(p).unwrap().cost
-        }).unwrap();
-        let node_pos = node_pos.clone();
-        unvisited_nodes.remove(node_index);
 
-        let node = nodes.get(&node_pos).unwrap().clone();
+    let mut best_costs: HashMap<(usize, usize), usize> = HashMap::new();
 
-        for adj_pos in adj(node.x, node.y, max_x + 1, max_y + 1) {
-            if unvisited_nodes.contains(&adj_pos) {
-                let new_cost = node.cost + get_cost(costs, &adj_pos);
-                let next_node = nodes.get_mut(&adj_pos).unwrap();
-                if new_cost < next_node.cost {
-                    next_node.cost = new_cost;
-                    next_node.prev_x = node.x;
-                    next_node.prev_y = node.y;
-                }
+    let mut heap = BinaryHeap::new();
+    heap.push(NodeCost { x: 0, y: 0, cost: 0 });
+
+    while let Some(NodeCost { x, y, cost }) = heap.pop() {
+        if cost > *best_costs.get(&(x, y)).unwrap_or(&usize::max_value()) {
+            continue;
+        }
+
+        for adj_pos in adj(x, y, max_x + 1, max_y + 1) {
+            let next = NodeCost { x: adj_pos.0, y: adj_pos.1, cost: cost + get_cost(costs, &adj_pos) };
+            if next.cost < *best_costs.get(&adj_pos).unwrap_or(&usize::max_value()) {
+                heap.push(next);
+                best_costs.insert(adj_pos, next.cost);
             }
         }
     }
 
-    nodes.get(&(max_x, max_y)).unwrap().cost
+    *best_costs.get(&(max_x, max_y)).unwrap()
 }
 
-fn part2(_input: &CostMap) -> usize {
-    0
+fn part1(costs: &CostMap) -> usize {
+    find_shortest_cost(costs)
+}
+
+fn part2(costs: &CostMap) -> usize {
+    let size_x = costs.iter().map(|(k, _)| k.0).max().unwrap() + 1;
+    let size_y = costs.iter().map(|(k, _)| k.1).max().unwrap() + 1;
+
+    let orig_costs: Vec<((usize, usize), usize)> = costs.iter().map(|(k, v)| (*k, *v)).collect();
+    let mut costs = costs.clone();
+    for (p, cost) in orig_costs {
+        for i in 0..5 {
+            for j in 0..5 {
+                if i == 0 && j == 0 {
+                    continue;
+                }
+
+                let dist = i + j;
+                let new_cost = (((cost - 1) + dist) % 9) + 1;
+                costs.insert((p.0 + i * size_x, p.1 + j * size_y), new_cost);
+            }
+        }
+    }
+
+    find_shortest_cost(&costs)
 }
 
 fn parse_costs(input: &str) -> CostMap {
