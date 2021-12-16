@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.10.2"
+bitvec = "0.22.3"
+hex = "0.4.3"
