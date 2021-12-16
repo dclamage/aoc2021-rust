@@ -17,7 +17,6 @@ fn part2(packet_data: &BS) -> usize {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 struct Packet {
     v: u8,
     t: u8,
