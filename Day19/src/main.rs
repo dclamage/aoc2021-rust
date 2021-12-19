@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::time;
 
@@ -30,14 +30,16 @@ fn create_omega_scanner(scanners: &[Scanner]) -> (Scanner, Vec<Point>) {
     }
 
     let mut omega_scanner: Scanner = scanners[0].clone();
-    let mut scanners_added: BTreeSet<usize> = BTreeSet::new();
+    let mut scanners_added: Vec<usize> = Vec::new();
     let mut scanners_properly_rotated: Vec<Scanner> = vec![Scanner::default(); scanners.len()];
     let mut scanner_offset_from_zero: Vec<Point> = vec![Point::new(0, 0, 0); scanners.len()];
-    scanners_added.insert(0);
+    scanners_added.push(0);
     scanners_properly_rotated[0] = scanners[0].clone();
 
+    let mut start_scanners_added_index = 0;
     while scanners_added.len() < scanners.len() {
         let mut found_any_matches = false;
+        let new_start_canners_added_index = scanners_added.len();
         for i in 1..scanners.len() {
             if scanners_added.contains(&i) {
                 continue;
@@ -46,7 +48,7 @@ fn create_omega_scanner(scanners: &[Scanner]) -> (Scanner, Vec<Point>) {
             for r in 0..24 {
                 let cur_scanner = &rotated_scanners[i][r];
                 let mut found_match = false;
-                for base_scanner_index in &scanners_added {
+                for base_scanner_index in scanners_added.iter().skip(start_scanners_added_index) {
                     let base_scanner = &scanners_properly_rotated[*base_scanner_index];
                     let matches = base_scanner.matches(&cur_scanner);
                     if let Some(offset) = matches {
@@ -60,12 +62,13 @@ fn create_omega_scanner(scanners: &[Scanner]) -> (Scanner, Vec<Point>) {
                     }
                 }
                 if found_match {
-                    scanners_added.insert(i);
+                    scanners_added.push(i);
                     found_any_matches = true;
                     break;
                 }
             }
         }
+        start_scanners_added_index = new_start_canners_added_index;
         if scanners_added.len() < scanners.len() && !found_any_matches {
             panic!("Not all scanners have a match");
         }
@@ -136,37 +139,25 @@ impl Scanner {
         let mut points: Vec<Point> = Vec::with_capacity(self.points.len());
 
         for point in &self.points {
-            let mut new_point = point.clone();
+            let mut new_point;
             match rotate_index / 4 {
                 0 => {
-                    new_point.x = point.x;
-                    new_point.y = point.y;
-                    new_point.z = point.z;
+                    new_point = Point::new(point.x, point.y, point.z);
                 }
                 1 => {
-                    new_point.x = -point.x;
-                    new_point.y = point.z;
-                    new_point.z = point.y;
+                    new_point = Point::new(-point.x, point.y, -point.z);
                 }
                 2 => {
-                    new_point.x = point.y;
-                    new_point.y = point.x;
-                    new_point.z = -point.z;
+                    new_point = Point::new(point.z, point.y, -point.x);
                 }
                 3 => {
-                    new_point.x = point.y;
-                    new_point.y = point.z;
-                    new_point.z = point.x;
+                    new_point = Point::new(-point.z, point.y, point.x);
                 }
                 4 => {
-                    new_point.x = point.z;
-                    new_point.y = point.x;
-                    new_point.z = point.y;
+                    new_point = Point::new(point.x, point.z, -point.y);
                 }
                 5 => {
-                    new_point.x = point.z;
-                    new_point.y = -point.y;
-                    new_point.z = point.x;
+                    new_point = Point::new(point.x, -point.z, point.y);
                 }
                 _ => panic!("Invalid rotate index"),
             }
@@ -174,19 +165,13 @@ impl Scanner {
             match rotate_index % 4 {
                 0 => {}
                 1 => {
-                    new_point.x = -new_point.x;
-                    new_point.y = -new_point.y;
-                    new_point.z = new_point.z;
+                    new_point = Point::new(-new_point.y, new_point.x, new_point.z);
                 }
                 2 => {
-                    new_point.x = -new_point.x;
-                    new_point.y = new_point.y;
-                    new_point.z = -new_point.z;
+                    new_point = Point::new(-new_point.x, -new_point.y, new_point.z);
                 }
                 3 => {
-                    new_point.x = new_point.x;
-                    new_point.y = -new_point.y;
-                    new_point.z = -new_point.z;
+                    new_point = Point::new(new_point.y, -new_point.x, new_point.z);
                 }
                 _ => panic!("Invalid rotate index"),
             }
@@ -207,6 +192,7 @@ impl Scanner {
                 .iter()
                 .filter(|&point| other.points.iter().map(|p| Point::sum(p, &offset)).any(|p| p == *point))
                 .count();
+
             if num_matching >= 12 {
                 return Some(offset);
             }
