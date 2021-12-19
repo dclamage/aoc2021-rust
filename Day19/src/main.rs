@@ -52,7 +52,8 @@ fn create_omega_scanner(scanners: &[Scanner]) -> (Scanner, Vec<Point>) {
                     let base_scanner = &scanners_properly_rotated[*base_scanner_index];
                     let matches = base_scanner.matches(&cur_scanner);
                     if let Some(offset) = matches {
-                        let offset_from_zero = scanner_offset_from_zero[*base_scanner_index].sum(&offset);
+                        let offset_from_zero =
+                            scanner_offset_from_zero[*base_scanner_index].sum(&offset);
                         scanner_offset_from_zero[i] = offset_from_zero.clone();
                         scanners_properly_rotated[i] = cur_scanner.clone();
 
@@ -190,7 +191,13 @@ impl Scanner {
             let num_matching = self
                 .points
                 .iter()
-                .filter(|&point| other.points.iter().map(|p| Point::sum(p, &offset)).any(|p| p == *point))
+                .filter(|&point| {
+                    other
+                        .points
+                        .iter()
+                        .map(|p| Point::sum(p, &offset))
+                        .any(|p| p == *point)
+                })
                 .count();
 
             if num_matching >= 12 {
