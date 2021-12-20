@@ -1,9 +1,8 @@
-//use itertools::Itertools;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::fs;
 use std::time;
 
-type Image = BTreeSet<(i64, i64)>;
+type Image = HashSet<(i64, i64)>;
 
 fn part1(decoder: &Vec<bool>, input_image: &Image) -> usize {
     let mut image = input_image.clone();
