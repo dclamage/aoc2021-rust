@@ -54,16 +54,10 @@ impl Move {
     fn dist(&self) -> i64 {
         let mut dist: i64 = 0;
         if self.from_location < OPEN_SPACE_INDEX {
-            dist += 1;
-            if self.from_index == 1 {
-                dist += 1;
-            }
+            dist += (self.from_index as i64) + 1;
         }
         if self.to_location < OPEN_SPACE_INDEX {
-            dist += 1;
-            if self.to_index == 1 {
-                dist += 1;
-            }
+            dist += (self.to_index as i64) + 1;
         }
 
         let from_open_index = if self.from_location < OPEN_SPACE_INDEX {
@@ -128,10 +122,14 @@ impl Map {
         let mut map = Map::new();
         map.open_space = self.open_space.clone();
         map.rooms = Vec::new();
-        map.rooms.push(vec![self.rooms[0][0], 4, 4, self.rooms[0][1]]);
-        map.rooms.push(vec![self.rooms[1][0], 3, 2, self.rooms[1][1]]);
-        map.rooms.push(vec![self.rooms[2][0], 2, 1, self.rooms[2][1]]);
-        map.rooms.push(vec![self.rooms[3][0], 1, 3, self.rooms[3][1]]);
+        map.rooms
+            .push(vec![self.rooms[0][0], 4, 4, self.rooms[0][1]]);
+        map.rooms
+            .push(vec![self.rooms[1][0], 3, 2, self.rooms[1][1]]);
+        map.rooms
+            .push(vec![self.rooms[2][0], 2, 1, self.rooms[2][1]]);
+        map.rooms
+            .push(vec![self.rooms[3][0], 1, 3, self.rooms[3][1]]);
 
         map
     }
@@ -187,16 +185,36 @@ impl Map {
                 continue;
             }
             let home_index = piece - 1;
-            if self.rooms[home_index][0] == 0 && self.rooms[home_index][1] == 0 {
-                let m = Move::new(OPEN_SPACE_INDEX, i, home_index, 1, piece);
-                if self.is_move_valid(&m) {
-                    moves.push(m);
-                    return moves;
+            for home_slot in (0..self.rooms[home_index].len()).rev() {
+                let existing_piece = self.rooms[home_index][home_slot];
+                if existing_piece == 0 {
+                    let m = Move::new(OPEN_SPACE_INDEX, i, home_index, home_slot, piece);
+                    if self.is_move_valid(&m) {
+                        moves.push(m);
+                        return moves;
+                    }
+                } else if existing_piece != piece {
+                    break;
                 }
             }
+        }
 
-            if self.rooms[home_index][0] == 0 && self.rooms[home_index][1] == piece {
-                let m = Move::new(OPEN_SPACE_INDEX, i, home_index, 0, piece);
+        for room_index in 0..self.rooms.len() {
+            if !self.has_incorrect_piece(room_index) {
+                continue;
+            }
+
+            let (move_piece, move_piece_slot) = self.top_piece_and_slot(room_index);
+            if move_piece != 0 && self.can_go_home(move_piece) {
+                let home_index = move_piece - 1;
+                let home_slot = self.open_slot(home_index);
+                let m = Move::new(
+                    room_index,
+                    move_piece_slot,
+                    home_index,
+                    home_slot,
+                    move_piece,
+                );
                 if self.is_move_valid(&m) {
                     moves.push(m);
                     return moves;
@@ -205,52 +223,17 @@ impl Map {
         }
 
         for room_index in 0..self.rooms.len() {
-            let piece0 = self.rooms[room_index][0];
-            let piece1 = self.rooms[room_index][1];
-            let correct_piece = room_index + 1;
-            if (piece0 == 0 || piece0 == correct_piece) && (piece1 == 0 || piece1 == correct_piece)
-            {
-                continue;
-            }
-            if piece0 != 0 && self.can_go_home(piece0) {
-                let home_index = piece0 - 1;
-                let home_slot = if self.rooms[home_index][1] == 0 { 1 } else { 0 };
-                let m = Move::new(room_index, 0, home_index, home_slot, piece0);
-                if self.is_move_valid(&m) {
-                    moves.push(m);
-                    return moves;
-                }
-            }
-            if piece0 == 0 && piece1 != 0 && self.can_go_home(piece1) {
-                let home_index = piece1 - 1;
-                let home_slot = if self.rooms[home_index][1] == 0 { 1 } else { 0 };
-                let m = Move::new(room_index, 1, home_index, home_slot, piece1);
-                if self.is_move_valid(&m) {
-                    moves.push(m);
-                    return moves;
-                }
-            }
-        }
-
-        for room_index in 0..self.rooms.len() {
-            let piece0 = self.rooms[room_index][0];
-            let piece1 = self.rooms[room_index][1];
-            let correct_piece = room_index + 1;
-            if piece0 == 0 && piece1 == 0
-                || piece0 == 0 && piece1 == correct_piece
-                || piece0 == correct_piece && piece1 == correct_piece
-            {
+            if !self.has_incorrect_piece(room_index) {
                 continue;
             }
 
-            let from_index = if piece0 != 0 { 0 } else { 1 };
-            let piece = if piece0 != 0 { piece0 } else { piece1 };
+            let (move_piece, move_piece_slot) = self.top_piece_and_slot(room_index);
             for i in 0..11 {
                 if i == 2 || i == 4 || i == 6 || i == 8 {
                     continue;
                 }
 
-                let m = Move::new(room_index, from_index, OPEN_SPACE_INDEX, i, piece);
+                let m = Move::new(room_index, move_piece_slot, OPEN_SPACE_INDEX, i, move_piece);
                 if self.is_move_valid(&m) {
                     moves.push(m);
                 }
@@ -260,15 +243,26 @@ impl Map {
     }
 
     fn can_go_home(&self, piece: usize) -> bool {
-        let home_index = piece - 1;
-        if self.rooms[home_index][0] == 0 && self.rooms[home_index][1] == 0 {
-            return true;
-        }
-        if self.rooms[home_index][0] == 0 && self.rooms[home_index][1] == piece {
-            return true;
-        }
+        !self.has_incorrect_piece(piece - 1)
+    }
 
-        false
+    fn open_slot(&self, room_index: usize) -> usize {
+        for i in (0..self.rooms[room_index].len()).rev() {
+            if self.rooms[room_index][i] == 0 {
+                return i;
+            }
+        }
+        panic!("No open slot in room {}", room_index);
+    }
+
+    fn top_piece_and_slot(&self, room_index: usize) -> (usize, usize) {
+        for slot in 0..self.rooms[room_index].len() {
+            let cur_piece = self.rooms[room_index][slot];
+            if cur_piece != 0 {
+                return (cur_piece, slot);
+            }
+        }
+        (0, 0)
     }
 
     fn is_move_valid(&self, m: &Move) -> bool {
@@ -320,15 +314,29 @@ impl Map {
         map
     }
 
+    fn has_incorrect_piece(&self, room_index: usize) -> bool {
+        let correct_piece = room_index + 1;
+        let room = &self.rooms[room_index];
+        for slot in 0..room.len() {
+            let cur_piece = room[slot];
+            if cur_piece != 0 && cur_piece != correct_piece {
+                return true;
+            }
+        }
+        false
+    }
+
     fn is_complete(&self) -> bool {
+        if self.open_space.iter().any(|&piece| piece != 0) {
+            return false;
+        }
+
         for room_index in 0..self.rooms.len() {
-            let correct_piece = room_index + 1;
-            if self.rooms[room_index][0] != correct_piece
-                || self.rooms[room_index][1] != correct_piece
-            {
+            if self.has_incorrect_piece(room_index) {
                 return false;
             }
         }
+
         true
     }
 
@@ -373,8 +381,8 @@ const OPEN_SPACE_INDEX: usize = 4;
 fn main() {
     // Read all lines of input.txt
     let read_time_start = time::Instant::now();
-    let input = fs::read_to_string("example.txt").expect("Unable to read file");
-    //let input = fs::read_to_string("input.txt").expect("Unable to read file");
+    //let input = fs::read_to_string("example.txt").expect("Unable to read file");
+    let input = fs::read_to_string("input.txt").expect("Unable to read file");
     let map = Map::parse(&input);
     map.print();
 
