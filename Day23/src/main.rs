@@ -5,12 +5,6 @@ use regex::Regex;
 use std::fs;
 use std::time;
 
-struct StepInfo {
-    map: Map,
-    moves: Vec<Move>,
-    cost: i64,
-}
-
 fn part1(input_map: &Map) -> i64 {
     input_map.lowest_cost()
 }
@@ -135,6 +129,12 @@ impl Map {
     }
 
     fn lowest_cost(&self) -> i64 {
+        struct StepInfo {
+            map: Map,
+            moves: Vec<Move>,
+            cost: i64,
+        }
+
         let mut stack: Vec<StepInfo> = Vec::new();
         stack.push(StepInfo {
             map: self.clone(),
